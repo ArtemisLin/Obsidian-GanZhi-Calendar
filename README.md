@@ -1,4 +1,4 @@
-# Obsidian 干支纪年插件 (Ganzhi Date Plugin)
+# Obsidian 干支纪年插件 (Ganzhi Calendar Plugin)
 
 这是一个为 [Obsidian](https://obsidian.md) 开发的插件，可以将公历日期转换为中国传统的干支纪年（四柱八字）格式。
 
@@ -8,6 +8,11 @@
 - 支持自定义显示格式
 - 简单易用的用户界面
 - 支持命令面板操作
+
+## 效果截图
+
+![在文档中显示效果](images/Snipaste_2025-03-05_16-38-19.png)
+![在状态栏显示效果](images/Snipaste_2025-03-05_16-38-30.png)
 
 ## 安装方法
 
@@ -61,7 +66,7 @@
 
 ## 支持
 
-如果你遇到任何问题或有改进建议，请在GitHub上[提交issue](https://github.com/ArtemisLin/ganzhi-date-plugin/issues)。
+如果你遇到任何问题或有改进建议，请在GitHub上[提交issue](https://github.com/ArtemisLin/ganzhi-Calendar-plugin/issues)。
 
 ## 致谢
 

@@ -20,3 +20,14 @@ data.json
 
 # Exclude macOS Finder (System Explorer) View States
 .DS_Store
+
+# 依赖目录
+node_modules/
+
+# 编译输出
+.DS_Store
+*.log
+
+# 开发环境配置
+.idea/
+.vscode/

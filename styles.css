@@ -1,8 +1,97 @@
-/*
+/* GanZhi Calendar plugin styles */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
-
-If your plugin does not need CSS, delete this file.
-
-*/
+/* Status bar item styles */
+.ganzhi-statusbar-item {
+    cursor: pointer;
+    padding: 0 8px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .ganzhi-statusbar-item:hover {
+    color: var(--interactive-accent);
+  }
+  
+  /* Five Elements (WuXing) colors */
+  .wood {
+    color: green !important;
+  }
+  
+  .fire {
+    color: red !important;
+  }
+  
+  .earth {
+    color: brown !important;
+  }
+  
+  .metal {
+    color: goldenrod !important;
+  }
+  
+  .water {
+    color: blue !important;
+  }
+  
+  /* Modal styles */
+  .ganzhi-date-picker {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 15px;
+  }
+  
+  .ganzhi-date-picker input {
+    flex: 1;
+    padding: 10px;
+    border-radius: 4px;
+    border: 1px solid var(--background-modifier-border);
+    background-color: var(--background-primary);
+    color: var(--text-normal);
+  }
+  
+  .ganzhi-preview {
+    margin-top: 20px;
+    padding: 15px;
+    background-color: var(--background-secondary);
+    border-radius: 4px;
+  }
+  
+  .ganzhi-preview h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+  
+  /* Button container */
+  .button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  
+  .button-container button {
+    padding: 8px 16px;
+    border-radius: 4px;
+    background-color: var(--interactive-normal);
+    color: var(--text-normal);
+    cursor: pointer;
+    border: none;
+  }
+  
+  .button-container button:hover {
+    background-color: var(--interactive-hover);
+  }
+  
+  .button-container button.mod-cta {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+  }
+  
+  .button-container button.mod-cta:hover {
+    background-color: var(--interactive-accent-hover);
+  }

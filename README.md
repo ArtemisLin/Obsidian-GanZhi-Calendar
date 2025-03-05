@@ -1,94 +1,70 @@
-# Obsidian Sample Plugin
+# Obsidian 干支纪年插件 (Ganzhi Date Plugin)
 
-This is a sample plugin for Obsidian (https://obsidian.md).
+这是一个为 [Obsidian](https://obsidian.md) 开发的插件，可以将公历日期转换为中国传统的干支纪年（四柱八字）格式。
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+## 功能特点
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+- 将选定的日期转换为干支纪年格式（年、月、日、时四柱）
+- 支持自定义显示格式
+- 简单易用的用户界面
+- 支持命令面板操作
 
-## First time developing plugins?
+## 安装方法
 
-Quick starting guide for new plugin devs:
+### 从Obsidian插件市场安装
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+1. 打开Obsidian软件
+2. 进入设置 > 第三方插件
+3. 禁用安全模式
+4. 点击"浏览"按钮
+5. 搜索"干支纪年"或"Ganzhi Calendar"
+6. 点击安装
 
-## Releasing new releases
+### 手动安装
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+1. 下载最新版本的发布包
+2. 解压下载的文件
+3. 将解压后的文件夹复制到你的Obsidian库的插件文件夹中：`<库文件夹>/.obsidian/plugins/`
+4. 重新启动Obsidian
+5. 进入设置 > 第三方插件，启用"Ganzhi Calendar"插件
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+## 使用方法
 
-## Adding your plugin to the community plugin list
+1. 在编辑模式下，右键有两个选项：
+·Insert Current GanZhi Calendar 插入当前时间的干支历
+·Insert Specific Date GanZhi Calendar 插入指定日期的干支历
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+2.使用命令面板（Ctrl+P）并搜索"GanZhi Calendar",也可看到上面所说的两个选项；
+3. 选择命令后，选中的日期将被转换为相应的干支纪年格式
 
-## How to use
+4.在模板文件中使用{{ganzhi}}标签，可以在每次调用这个模板后，插入当前时间的干支历；
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+## 设置选项
 
-## Manually installing the plugin
+- **Show in Status Bar**：是否显示在Obsidian底部状态栏；
+- **Color By WuXing**：选择是否需要根据五行颜色化文本；
+- **WuXing Color Setting**：五行颜色设置，可以自定义五行的颜色；
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+## 开发
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+这个插件使用Claude Sonnet 3.7开发，并使用Lunar-Script进行干支转换。
 
-## Funding URL
+### 本地开发
 
-You can include funding URLs where people who use your plugin can financially support it.
+1. 克隆这个仓库
+2. 运行 `npm install` 安装依赖
+3. 运行 `npm run dev` 启动开发服务器
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+## 许可证
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
-```
+本项目采用 [MIT许可证](LICENSE) 授权。
 
-If you have multiple URLs, you can also do:
+## 支持
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
-```
+如果你遇到任何问题或有改进建议，请在GitHub上[提交issue](https://github.com/ArtemisLin/ganzhi-date-plugin/issues)。
 
-## API Documentation
+## 致谢
 
-See https://github.com/obsidianmd/obsidian-api
+感谢Claude Sonnet 3.7,让我一个编程小白实现了这个功能，以及为插件开发提供支持的Obsidian社区。
+
+Written By Claude Sonnet 3.7；

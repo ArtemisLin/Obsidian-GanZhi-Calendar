@@ -28,6 +28,3 @@ node_modules/
 .DS_Store
 *.log
 
-# 开发环境配置
-.idea/
-.vscode/

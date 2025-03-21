@@ -102,12 +102,69 @@ function getHourGan(dayGanIndex: number, hourZhiIndex: number): number {
  * @param minute 公历分钟（可选）
  * @returns 干支历信息
  */
+/**
+ * 计算月干支
+ * 根据年干支和月份计算月干支
+ * 
+ * @param lunar Lunar对象
+ * @returns 月干支字符串
+ */
+function calculateMonthGZ(lunar: any): string {
+    try {
+        // 获取农历月份
+        const month = lunar.getMonth();
+        
+        // 获取年干的索引（0-9）
+        const yearGan = lunar.getYearInGanZhi().charAt(0);
+        const yearGanIndex = TIAN_GAN.indexOf(yearGan);
+        
+        // 根据年干确定正月的天干
+        // 甲己年 -> 丙寅月起始
+        // 乙庚年 -> 戊寅月起始
+        // 丙辛年 -> 庚寅月起始
+        // 丁壬年 -> 壬寅月起始
+        // 戊癸年 -> 甲寅月起始
+        const baseMonthGan = [2, 4, 6, 8, 0]; // 对应丙、戊、庚、壬、甲
+        const startGan = baseMonthGan[yearGanIndex % 5];
+        
+        // 计算月干（每个月天干前进1位）
+        const monthGanIndex = (startGan + month - 1) % 10;
+        
+        // 确定月支（寅月为正月，依次类推）
+        const monthZhiIndex = (month + 1) % 12;
+        
+        // 组合月干支
+        return TIAN_GAN[monthGanIndex] + DI_ZHI[monthZhiIndex];
+    } catch (error) {
+        console.error("计算月干支失败:", error);
+        return "未知";
+    }
+}
 function getGanZhi(year: number, month: number, day: number, hour?: number, minute?: number) {
     try {
         console.log(`开始计算干支历: ${year}年${month}月${day}日 ${hour !== undefined ? hour + '时' : ''}`);
         
-        // 创建公历日期
-        const solar = Solar.fromYmd(year, month, day);
+        // 处理子时跨日问题
+        let solarYear = year;
+        let solarMonth = month;
+        let solarDay = day;
+        
+        // 如果是子时（23:00-00:59），使用第二天的日期计算日柱
+        if (hour !== undefined && hour >= 23) {
+            // 创建日期对象并加一天
+            const nextDay = new Date(year, month - 1, day);
+            nextDay.setDate(nextDay.getDate() + 1);
+            
+            // 更新年月日
+            solarYear = nextDay.getFullYear();
+            solarMonth = nextDay.getMonth() + 1;
+            solarDay = nextDay.getDate();
+            
+            console.log(`子时跨日处理: 使用日期 ${solarYear}年${solarMonth}月${solarDay}日 计算日柱`);
+        }
+        
+        // 创建公历日期对象
+        const solar = Solar.fromYmd(solarYear, solarMonth, solarDay);
         console.log("创建Solar对象成功");
         
         // 转换为农历
@@ -120,7 +177,7 @@ function getGanZhi(year: number, month: number, day: number, hour?: number, minu
         
         // 获取干支信息
         const yearGZ = lunar.getYearInGanZhi();
-        const monthGZ = lunar.getMonthInGanZhi();
+        const monthGZ = calculateMonthGZ(lunar);
         const dayGZ = lunar.getDayInGanZhi();
         
         console.log(`年柱: ${yearGZ}, 月柱: ${monthGZ}, 日柱: ${dayGZ}`);
@@ -160,7 +217,7 @@ function getGanZhi(year: number, month: number, day: number, hour?: number, minu
         
         console.log(`节气信息: ${jieQiInfo || '无'}`);
         
-        // 格式化公历日期时间
+        // 格式化公历日期时间 (使用原始输入的年月日时间)
         let solarDateTime = `${year}年${month}月${day}日`;
         if (hour !== undefined) {
             solarDateTime += ` ${hour.toString().padStart(2, '0')}`;
@@ -242,11 +299,13 @@ interface GanZhiCalendarSettings {
     colorize: boolean;
     showInStatusBar: boolean;
     templateTag: string;
+    templateFolderPath: string; // 新增：模板文件夹路径
     woodColor: string;
     fireColor: string;
     earthColor: string;
     metalColor: string;
     waterColor: string;
+
 }
 
 // 默认设置
@@ -254,6 +313,7 @@ const DEFAULT_SETTINGS: GanZhiCalendarSettings = {
     colorize: true,
     showInStatusBar: true,
     templateTag: "{{ganzhi}}",
+    templateFolderPath: "", // 默认为空，将自动尝试检测
     woodColor: "green",
     fireColor: "red",
     earthColor: "brown",
@@ -415,7 +475,15 @@ class GanZhiCalendarSettingTab extends PluginSettingTab {
                     this.plugin.settings.templateTag = value;
                     await this.plugin.saveSettings();
                 }));
-        
+        new Setting(containerEl)
+            .setName('Template Folder Path')
+            .setDesc('Specify the folder path where your templates are stored (leave empty to auto-detect)')
+            .addText(text => text
+                .setValue(this.plugin.settings.templateFolderPath)
+                .onChange(async (value) => {
+                    this.plugin.settings.templateFolderPath = value;
+                    await this.plugin.saveSettings();
+                }));
         containerEl.createEl('h3', {text: 'How to use with Template Plugin'});
         const usageEl = containerEl.createEl('div', {cls: 'setting-item-description'});
         usageEl.createEl('p', {text: 'To use with Obsidian\'s Templates plugin:'});
@@ -566,6 +634,15 @@ export default class GanZhiCalendarPlugin extends Plugin {
                 this.openDatePickerModal();
             }
         });
+
+        // 在 onload 方法中的其他 this.addCommand 调用附近添加
+        this.addCommand({
+            id: 'replace-ganzhi-markers',
+            name: '替换文档中的干支标记为当前日期',
+            callback: () => {
+                this.replaceGanZhiMarkersInActiveFile();
+            }
+        });
         
         // 添加编辑器右键菜单
         this.registerEvent(
@@ -593,39 +670,32 @@ export default class GanZhiCalendarPlugin extends Plugin {
         );
         
         // 添加文件创建钩子，用于模板替换
+        // 添加文件创建钩子，用于模板替换
+        // 添加文件创建钩子，用于模板替换
         this.registerEvent(
             this.app.vault.on('create', async (file) => {
-                // 只处理markdown文件，并确保是TFile类型
-                if (file.path.endsWith('.md') && file instanceof TFile) {
+                // 只处理markdown文件，并确保是TFile类型，且不是模板文件
+                if (file.path.endsWith('.md') && file instanceof TFile && !this.isTemplateFile(file)) {
                     setTimeout(async () => {
                         try {
                             const content = await this.app.vault.read(file);
+                            
+                            // 检查是否包含模板标记
                             if (content.includes(this.settings.templateTag)) {
-                                // 替换模板标记
-                                const now = new Date();
-                                const ganzhiInfo = getGanZhi(
-                                    now.getFullYear(),
-                                    now.getMonth() + 1,
-                                    now.getDate(),
-                                    now.getHours(),
-                                    now.getMinutes()
-                                );
+                                // 处理内容
+                                const processedContent = this.processTemplateContent(content);
                                 
-                                const formattedGanZhi = formatSimpleGanZhi(ganzhiInfo, this.settings.colorize, this.settings);
-                                const newContent = content.replace(
-                                    this.settings.templateTag,
-                                    formattedGanZhi
-                                );
-                                
-                                await this.app.vault.modify(file, newContent);
+                                // 更新文件
+                                await this.app.vault.modify(file, processedContent);
                             }
                         } catch (error) {
                             console.error("Error processing template:", error);
                         }
-                    }, 100); // 小延迟确保文件已完全创建
+                    }, 300); // 延长延迟以确保文件已完全创建
                 }
             })
         );
+
         
         // 添加状态栏项目
         if (this.settings.showInStatusBar) {
@@ -635,6 +705,54 @@ export default class GanZhiCalendarPlugin extends Plugin {
             // 每分钟更新一次状态栏
             this.registerInterval(window.setInterval(() => this.updateStatusBar(), 60000));
         }
+
+        // 在 onload 方法中添加
+// 使用monkey patch方式修改Obsidian的模板处理
+        this.registerEvent(
+            // @ts-ignore - 访问内部API
+            this.app.workspace.on("templates:before-insert", (template: string, targetFile: TFile) => {
+                // 拦截模板内容并处理它
+                setTimeout(() => {
+                    try {
+                        // 获取目标文件内容
+                        this.app.vault.read(targetFile).then(content => {
+                            // 检查和替换干支标记
+                            if (content.includes(this.settings.templateTag)) {
+                                const processedContent = this.processTemplateContent(content);
+                                this.app.vault.modify(targetFile, processedContent);
+                            }
+                        });
+                    } catch (error) {
+                        console.error("干支日历模板处理错误:", error);
+                    }
+                }, 200); // 延迟确保模板已插入
+            })
+        );
+
+        // 在 onload 方法中添加
+        this.registerEvent(
+            this.app.vault.on('modify', async (file) => {
+                // 只处理非模板文件夹中的markdown文件
+                if (file instanceof TFile && file.path.endsWith('.md') && !this.isTemplateFile(file)) {
+                    try {
+                        const content = await this.app.vault.read(file);
+                        
+                        // 检查是否包含模板标记
+                        if (content.includes(this.settings.templateTag)) {
+                            // 处理内容
+                            const processedContent = this.processTemplateContent(content);
+                            
+                            // 如果内容有变化，更新文件
+                            if (processedContent !== content) {
+                                await this.app.vault.modify(file, processedContent);
+                            }
+                        }
+                    } catch (error) {
+                        console.error("处理文件修改时出错:", error);
+                    }
+                }
+            })
+        );
     }
     
     onunload(): void {
@@ -769,6 +887,109 @@ export default class GanZhiCalendarPlugin extends Plugin {
             editor.replaceSelection(text);
         } else {
             new Notice('请先打开一个Markdown文件');
+        }
+    }
+
+    // 判断文件是否为模板文件
+isTemplateFile(file: TFile): boolean {
+    // 检查文件是否在模板文件夹中
+    const templateFolderSetting = this.getTemplateFolderPath();
+    
+    if (templateFolderSetting && file.path.startsWith(templateFolderSetting)) {
+        return true;
+    }
+    
+    // 检查文件名是否包含"template"或"模板"关键词
+    const fileName = file.basename.toLowerCase();
+    if (fileName.includes("template") || fileName.includes("模板")) {
+        return true;
+    }
+    
+    return false;
+}
+
+// 获取模板文件夹路径
+    // 获取模板文件夹路径
+    getTemplateFolderPath(): string | null {
+        // 优先使用用户指定的路径
+        if (this.settings.templateFolderPath) {
+            return this.settings.templateFolderPath;
+        }
+        
+        // 尝试获取Obsidian模板插件的设置
+        // @ts-ignore - 访问内部API
+        const templatePlugin = this.app.plugins.plugins["templates"];
+        if (templatePlugin && templatePlugin.settings && templatePlugin.settings.folder) {
+            return templatePlugin.settings.folder;
+        }
+        
+        // 如果找不到模板插件设置，返回null
+        return null;
+    }
+
+    // 在 GanZhiCalendarPlugin 类中添加新方法
+    processTemplateContent(content: string): string {
+        // 检查内容是否包含模板标记
+        if (content.includes(this.settings.templateTag)) {
+            // 生成当前时间的干支信息
+            const now = new Date();
+            const ganzhiInfo = getGanZhi(
+                now.getFullYear(),
+                now.getMonth() + 1,
+                now.getDate(),
+                now.getHours(),
+                now.getMinutes()
+            );
+            
+            // 格式化并替换标记
+            const formattedGanZhi = formatSimpleGanZhi(ganzhiInfo, this.settings.colorize, this.settings);
+            return content.replace(
+                new RegExp(this.settings.templateTag, 'g'),
+                formattedGanZhi
+            );
+        }
+        
+        return content;
+    }
+
+    // 添加在 GanZhiCalendarPlugin 类内部
+    async replaceGanZhiMarkersInActiveFile() {
+        const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!activeView) {
+            new Notice('请先打开一个Markdown文件');
+            return;
+        }
+        
+        try {
+            const editor = activeView.editor;
+            const content = editor.getValue();
+            
+            // 检查是否包含特殊标记
+            if (content.includes('{{ganzhi_now}}')) {
+                const now = new Date();
+                const ganzhiInfo = getGanZhi(
+                    now.getFullYear(),
+                    now.getMonth() + 1,
+                    now.getDate(),
+                    now.getHours(),
+                    now.getMinutes()
+                );
+                
+                const formattedGanZhi = formatSimpleGanZhi(ganzhiInfo, this.settings.colorize, this.settings);
+                
+                // 替换所有标记
+                const newContent = content.replace(/\{\{ganzhi_now\}\}/g, formattedGanZhi);
+                
+                // 更新编辑器内容
+                editor.setValue(newContent);
+                
+                new Notice('成功更新干支信息');
+            } else {
+                new Notice('当前文档中没有干支标记');
+            }
+        } catch (error) {
+            console.error('替换干支标记时出错:', error);
+            new Notice(`替换干支标记失败: ${error.message}`);
         }
     }
 }

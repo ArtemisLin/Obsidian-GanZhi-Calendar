@@ -1,10 +1,10 @@
 {
-	"id": "ganzhi-calendar",
-	"name": "GanZhi Calendar",
+	"id": "ganzhi-date-plugin",
+	"name": "Ganzhi Calendar",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Calculate traditional Chinese GanZhi calendar (Stems and Branches calendar)",
+	"description": "将公元纪年转换为干支纪年显示",
 	"author": "ArtemisLin",
 	"authorUrl": "https://github.com/ArtemisLin",
-	"isDesktopOnly": false
+	"isDesktopOnly": true
   }

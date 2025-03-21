@@ -243,6 +243,113 @@ function getGanZhi(year: number, month: number, day: number, hour?: number, minu
 }
 
 /**
+ * 生成一天十三个时辰显示的干支列表（区分早晚子时）
+ * 
+ * @param date 日期对象
+ * @param settings 插件设置
+ * @returns 格式化的时辰列表文本
+ */
+function generateDailyTimeList(date: Date, settings: GanZhiCalendarSettings): string {
+    try {
+        // 获取当天的日期
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        
+        // 计算当天的干支
+        const ganzhiInfo = getGanZhi(year, month, day, 12, 0); // 用中午12点计算日干
+        
+        // 获取日干索引
+        const dayGan = ganzhiInfo.dayGZ.charAt(0);
+        const dayGanIndex = TIAN_GAN.indexOf(dayGan);
+        
+        // 获取第二天的干支（用于晚子时）
+        const tomorrow = new Date(date);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const tomorrowGanzhiInfo = getGanZhi(
+            tomorrow.getFullYear(), 
+            tomorrow.getMonth() + 1, 
+            tomorrow.getDate(), 
+            12, 
+            0
+        );
+        const tomorrowDayGan = tomorrowGanzhiInfo.dayGZ.charAt(0);
+        const tomorrowDayGanIndex = TIAN_GAN.indexOf(tomorrowDayGan);
+        
+        let result = "";
+        
+        // 首先添加早子时 (00:00-00:59)
+        const earlyZiHourGanIndex = getHourGan(dayGanIndex, 0); // 子时
+        const earlyZiHourGan = TIAN_GAN[earlyZiHourGanIndex];
+        const ziZhi = DI_ZHI[0]; // 子
+        
+        // 应用颜色并添加早子时
+        if (settings.colorize) {
+            const coloredGan = `<span style="color: ${getWuxingColor(earlyZiHourGan, settings)};">${earlyZiHourGan}</span>`;
+            const coloredZhi = `<span style="color: ${getWuxingColor(ziZhi, settings)};">${ziZhi}</span>`;
+            result += `• ${coloredGan}${coloredZhi} (00:00-00:59)\n`;
+        } else {
+            result += `• ${earlyZiHourGan}${ziZhi} (00:00-00:59)\n`;
+        }
+        
+        // 添加从丑时到戌时的时辰 (01:00-22:59)
+        for (let i = 1; i < 11; i++) {
+            // 计算时干
+            const hourGanIndex = getHourGan(dayGanIndex, i);
+            const hourGan = TIAN_GAN[hourGanIndex];
+            const hourZhi = DI_ZHI[i];
+            
+            // 获取时间范围
+            const startHour = (i * 2 - 1).toString().padStart(2, '0');
+            const endHour = (i * 2).toString().padStart(2, '0');
+            const timeRange = `${startHour}:00-${endHour}:59`;
+            
+            // 应用颜色
+            if (settings.colorize) {
+                const coloredGan = `<span style="color: ${getWuxingColor(hourGan, settings)};">${hourGan}</span>`;
+                const coloredZhi = `<span style="color: ${getWuxingColor(hourZhi, settings)};">${hourZhi}</span>`;
+                result += `• ${coloredGan}${coloredZhi} (${timeRange})\n`;
+            } else {
+                result += `• ${hourGan}${hourZhi} (${timeRange})\n`;
+            }
+        }
+        
+        // 添加亥时 (21:00-22:59)
+        const haiHourGanIndex = getHourGan(dayGanIndex, 11);
+        const haiHourGan = TIAN_GAN[haiHourGanIndex];
+        const haiZhi = DI_ZHI[11]; // 亥
+        
+        // 应用颜色并添加亥时
+        if (settings.colorize) {
+            const coloredGan = `<span style="color: ${getWuxingColor(haiHourGan, settings)};">${haiHourGan}</span>`;
+            const coloredZhi = `<span style="color: ${getWuxingColor(haiZhi, settings)};">${haiZhi}</span>`;
+            result += `• ${coloredGan}${coloredZhi} (21:00-22:59)\n`;
+        } else {
+            result += `• ${haiHourGan}${haiZhi} (21:00-22:59)\n`;
+        }
+        
+        // 最后添加晚子时 (23:00-23:59)，使用第二天的日干
+        const lateZiHourGanIndex = getHourGan(tomorrowDayGanIndex, 0); // 子时
+        const lateZiHourGan = TIAN_GAN[lateZiHourGanIndex];
+        
+        // 应用颜色并添加晚子时
+        if (settings.colorize) {
+            const coloredGan = `<span style="color: ${getWuxingColor(lateZiHourGan, settings)};">${lateZiHourGan}</span>`;
+            const coloredZhi = `<span style="color: ${getWuxingColor(ziZhi, settings)};">${ziZhi}</span>`;
+            result += `• ${coloredGan}${coloredZhi} (23:00-23:59)\n`;
+        } else {
+            result += `• ${lateZiHourGan}${ziZhi} (23:00-23:59)\n`;
+        }
+        
+        return result;
+    } catch (error) {
+        console.error("生成时辰列表失败:", error);
+        return "生成时辰列表失败: " + error.message;
+    }
+}
+
+
+/**
  * 生成简洁格式的干支历输出
  * 
  * @param ganzhiInfo 干支历信息
@@ -275,6 +382,7 @@ function formatSimpleGanZhi(ganzhiInfo: any, colorize: boolean = false, settings
     
     return result;
 }
+
 /**
  * 格式化状态栏显示的干支历
  * 
@@ -634,68 +742,107 @@ export default class GanZhiCalendarPlugin extends Plugin {
                 this.openDatePickerModal();
             }
         });
-
-        // 在 onload 方法中的其他 this.addCommand 调用附近添加
+        
+        // 添加命令：插入今日十二时辰列表
         this.addCommand({
-            id: 'replace-ganzhi-markers',
-            name: '替换文档中的干支标记为当前日期',
+            id: 'insert-daily-time-list',
+            name: '插入今日十二时辰列表',
             callback: () => {
-                this.replaceGanZhiMarkersInActiveFile();
+                this.insertDailyTimeList();
+            }
+        });
+        
+        // 添加命令：插入指定日期的十二时辰列表
+        this.addCommand({
+            id: 'insert-specific-date-time-list',
+            name: '插入指定日期的十二时辰列表',
+            callback: () => {
+                this.openTimePickerModal();
             }
         });
         
         // 添加编辑器右键菜单
         this.registerEvent(
             this.app.workspace.on("editor-menu", (menu, editor, view) => {
-                // 插入今日干支历菜单项
+                // 干支历菜单分隔线
+                menu.addSeparator();
+                
+                // 添加四个干支历相关的菜单项
                 menu.addItem((item) => {
                     item
-                        .setTitle("Insert Current GanZhi Calendar")
+                        .setTitle("干支历: 插入当前日期")
                         .setIcon("calendar")
                         .onClick(() => {
                             this.insertCurrentDateGanZhi();
                         });
                 });
                 
-                // 插入指定日期干支历菜单项
                 menu.addItem((item) => {
                     item
-                        .setTitle("Insert Specific Date GanZhi Calendar")
+                        .setTitle("干支历: 插入指定日期")
                         .setIcon("calendar-plus")
                         .onClick(() => {
                             this.openDatePickerModal();
                         });
                 });
+                
+                menu.addItem((item) => {
+                    item
+                        .setTitle("干支历: 插入今日十二时辰")
+                        .setIcon("clock")
+                        .onClick(() => {
+                            this.insertDailyTimeList();
+                        });
+                });
+                
+                menu.addItem((item) => {
+                    item
+                        .setTitle("干支历: 插入指定日期十二时辰")
+                        .setIcon("calendar-clock")
+                        .onClick(() => {
+                            this.openTimePickerModal();
+                        });
+                });
+                
+                // 结束干支历菜单组的分隔线
+                menu.addSeparator();
             })
         );
         
         // 添加文件创建钩子，用于模板替换
-        // 添加文件创建钩子，用于模板替换
-        // 添加文件创建钩子，用于模板替换
         this.registerEvent(
             this.app.vault.on('create', async (file) => {
-                // 只处理markdown文件，并确保是TFile类型，且不是模板文件
-                if (file.path.endsWith('.md') && file instanceof TFile && !this.isTemplateFile(file)) {
+                // 只处理markdown文件，并确保是TFile类型
+                if (file.path.endsWith('.md') && file instanceof TFile) {
                     setTimeout(async () => {
                         try {
                             const content = await this.app.vault.read(file);
-                            
-                            // 检查是否包含模板标记
                             if (content.includes(this.settings.templateTag)) {
-                                // 处理内容
-                                const processedContent = this.processTemplateContent(content);
+                                // 替换模板标记
+                                const now = new Date();
+                                const ganzhiInfo = getGanZhi(
+                                    now.getFullYear(),
+                                    now.getMonth() + 1,
+                                    now.getDate(),
+                                    now.getHours(),
+                                    now.getMinutes()
+                                );
                                 
-                                // 更新文件
-                                await this.app.vault.modify(file, processedContent);
+                                const formattedGanZhi = formatSimpleGanZhi(ganzhiInfo, this.settings.colorize, this.settings);
+                                const newContent = content.replace(
+                                    this.settings.templateTag,
+                                    formattedGanZhi
+                                );
+                                
+                                await this.app.vault.modify(file, newContent);
                             }
                         } catch (error) {
                             console.error("Error processing template:", error);
                         }
-                    }, 300); // 延长延迟以确保文件已完全创建
+                    }, 100); // 小延迟确保文件已完全创建
                 }
             })
         );
-
         
         // 添加状态栏项目
         if (this.settings.showInStatusBar) {
@@ -705,54 +852,6 @@ export default class GanZhiCalendarPlugin extends Plugin {
             // 每分钟更新一次状态栏
             this.registerInterval(window.setInterval(() => this.updateStatusBar(), 60000));
         }
-
-        // 在 onload 方法中添加
-// 使用monkey patch方式修改Obsidian的模板处理
-        this.registerEvent(
-            // @ts-ignore - 访问内部API
-            this.app.workspace.on("templates:before-insert", (template: string, targetFile: TFile) => {
-                // 拦截模板内容并处理它
-                setTimeout(() => {
-                    try {
-                        // 获取目标文件内容
-                        this.app.vault.read(targetFile).then(content => {
-                            // 检查和替换干支标记
-                            if (content.includes(this.settings.templateTag)) {
-                                const processedContent = this.processTemplateContent(content);
-                                this.app.vault.modify(targetFile, processedContent);
-                            }
-                        });
-                    } catch (error) {
-                        console.error("干支日历模板处理错误:", error);
-                    }
-                }, 200); // 延迟确保模板已插入
-            })
-        );
-
-        // 在 onload 方法中添加
-        this.registerEvent(
-            this.app.vault.on('modify', async (file) => {
-                // 只处理非模板文件夹中的markdown文件
-                if (file instanceof TFile && file.path.endsWith('.md') && !this.isTemplateFile(file)) {
-                    try {
-                        const content = await this.app.vault.read(file);
-                        
-                        // 检查是否包含模板标记
-                        if (content.includes(this.settings.templateTag)) {
-                            // 处理内容
-                            const processedContent = this.processTemplateContent(content);
-                            
-                            // 如果内容有变化，更新文件
-                            if (processedContent !== content) {
-                                await this.app.vault.modify(file, processedContent);
-                            }
-                        }
-                    } catch (error) {
-                        console.error("处理文件修改时出错:", error);
-                    }
-                }
-            })
-        );
     }
     
     onunload(): void {
@@ -891,22 +990,22 @@ export default class GanZhiCalendarPlugin extends Plugin {
     }
 
     // 判断文件是否为模板文件
-isTemplateFile(file: TFile): boolean {
-    // 检查文件是否在模板文件夹中
-    const templateFolderSetting = this.getTemplateFolderPath();
-    
-    if (templateFolderSetting && file.path.startsWith(templateFolderSetting)) {
-        return true;
+    isTemplateFile(file: TFile): boolean {
+        // 检查文件是否在模板文件夹中
+        const templateFolderSetting = this.getTemplateFolderPath();
+        
+        if (templateFolderSetting && file.path.startsWith(templateFolderSetting)) {
+            return true;
+        }
+        
+        // 检查文件名是否包含"template"或"模板"关键词
+        const fileName = file.basename.toLowerCase();
+        if (fileName.includes("template") || fileName.includes("模板")) {
+            return true;
+        }
+        
+        return false;
     }
-    
-    // 检查文件名是否包含"template"或"模板"关键词
-    const fileName = file.basename.toLowerCase();
-    if (fileName.includes("template") || fileName.includes("模板")) {
-        return true;
-    }
-    
-    return false;
-}
 
 // 获取模板文件夹路径
     // 获取模板文件夹路径
@@ -991,5 +1090,36 @@ isTemplateFile(file: TFile): boolean {
             console.error('替换干支标记时出错:', error);
             new Notice(`替换干支标记失败: ${error.message}`);
         }
+    }
+    // 在GanZhiCalendarPlugin类中添加新命令
+    async insertDailyTimeList() {
+        try {
+            const now = new Date();
+            const timeList = generateDailyTimeList(now, this.settings);
+            
+            // 插入编辑器
+            this.insertTextToEditor(timeList);
+            new Notice("已插入今日十二时辰列表");
+        } catch (error) {
+            console.error("插入时辰列表失败:", error);
+            new Notice(`插入时辰列表失败: ${error.message}`);
+        }
+    }
+    // 插入指定日期的十二时辰列表
+    openTimePickerModal(): void {
+        const dateModal = new DatePickerModal(this.app, (year, month, day, hour, minute) => {
+            try {
+                const selectedDate = new Date(year, month - 1, day);
+                const timeList = generateDailyTimeList(selectedDate, this.settings);
+                
+                // 插入编辑器
+                this.insertTextToEditor(timeList);
+                new Notice(`已插入 ${year}年${month}月${day}日 的十二时辰列表`);
+            } catch (error) {
+                console.error("插入指定日期时辰列表失败:", error);
+                new Notice(`插入指定日期时辰列表失败: ${error.message}`);
+            }
+        });
+        dateModal.open();
     }
 }
